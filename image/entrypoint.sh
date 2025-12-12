@@ -13,6 +13,7 @@ set -euo pipefail
 : "${WEBDAV_BACKUP_PATH:=}"
 
 mkdir -p "${DATA_DIR}"
+mkdir -p /var/www/html
 
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
   python3 /backup.py restore \
@@ -41,16 +42,16 @@ fi
 exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
 app_pid=$!
 
-socat TCP-LISTEN:"${APP_PUBLIC_PORT}",fork,reuseaddr TCP:127.0.0.1:"${APP_INTERNAL_PORT}" > /dev/null 2>&1 &
-proxy_pid=$!
+nginx -g "daemon off;" > /dev/null 2>&1 &
+nginx_pid=$!
 
 term_handler() {
-  kill -TERM "${proxy_pid}" 2>/dev/null || true
+  kill -TERM "${nginx_pid}" 2>/dev/null || true
   kill -TERM "${app_pid}" 2>/dev/null || true
   wait "${app_pid}" 2>/dev/null || true
 }
 trap term_handler TERM INT
 
-wait -n "${app_pid}" "${proxy_pid}"
+wait -n "${app_pid}" "${nginx_pid}"
 term_handler
 exit 0
