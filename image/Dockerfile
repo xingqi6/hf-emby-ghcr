@@ -12,12 +12,19 @@ RUN apt-get update \
     tzdata \
   && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL -o /tmp/emby.deb \
-    "https://github.com/MediaBrowser/Emby.Releases/releases/download/${EMBY_VERSION}/emby-server-deb_${EMBY_VERSION}_amd64.deb" \
-  && apt-get update \
-  && apt-get install -y --no-install-recommends /tmp/emby.deb \
-  && rm -f /tmp/emby.deb \
-  && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+  echo '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d; \
+  chmod +x /usr/sbin/policy-rc.d; \
+  mkdir -p /etc/init.d; \
+  echo '#!/bin/sh\nexit 0\n' > /etc/init.d/emby-server; \
+  chmod +x /etc/init.d/emby-server; \
+  curl -fsSL -o /tmp/emby.deb \
+    "https://github.com/MediaBrowser/Emby.Releases/releases/download/${EMBY_VERSION}/emby-server-deb_${EMBY_VERSION}_amd64.deb"; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends /tmp/emby.deb; \
+  rm -f /tmp/emby.deb; \
+  rm -f /usr/sbin/policy-rc.d /etc/init.d/emby-server; \
+  rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
@@ -25,11 +32,11 @@ RUN python3 -m venv /opt/venv \
 ENV PATH="/opt/venv/bin:${PATH}"
 ENV APP_PUBLIC_PORT=7860
 ENV APP_INTERNAL_PORT=8096
-ENV DATA_DIR=/data
+ENV DATA_DIR=/var/lib/emby
 
 RUN useradd -m -u 1000 appuser \
-  && mkdir -p /data \
-  && chown -R appuser:appuser /data
+  && mkdir -p /var/lib/emby \
+  && chown -R appuser:appuser /var/lib/emby
 
 WORKDIR /home/appuser
 
