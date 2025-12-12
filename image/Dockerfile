@@ -10,6 +10,7 @@ RUN apt-get update \
     ffmpeg \
     libsqlite3-0 \
     socat \
+    nginx-light \
     tzdata \
   && rm -rf /var/lib/apt/lists/*
 
