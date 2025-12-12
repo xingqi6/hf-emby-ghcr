@@ -17,14 +17,14 @@ RUN set -eux; \
   echo '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d; \
   chmod +x /usr/sbin/policy-rc.d; \
   mkdir -p /etc/init.d; \
-  echo '#!/bin/sh\nexit 0\n' > /etc/init.d/mediacore-service; \
-  chmod +x /etc/init.d/mediacore-service; \
+  echo '#!/bin/sh\nexit 0\n' > /etc/init.d/emby-server; \
+  chmod +x /etc/init.d/emby-server; \
   curl -fsSL -o /tmp/package.deb \
     "https://github.com/MediaBrowser/Emby.Releases/releases/download/${APP_VERSION}/emby-server-deb_${APP_VERSION}_amd64.deb"; \
   apt-get update; \
   apt-get install -y --no-install-recommends /tmp/package.deb; \
   rm -f /tmp/package.deb; \
-  rm -f /usr/sbin/policy-rc.d /etc/init.d/mediacore-service; \
+  rm -f /usr/sbin/policy-rc.d /etc/init.d/emby-server; \
   rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
