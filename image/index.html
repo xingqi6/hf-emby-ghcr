@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绿色地球 - 环境保护倡议</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: fadeIn 1s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '🌍';
+            font-size: 120px;
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            opacity: 0.1;
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+        
+        .content {
+            padding: 60px 40px;
+        }
+        
+        .mission {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .mission h2 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        
+        .mission p {
+            color: #555;
+            font-size: 1.2em;
+            line-height: 1.8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .feature {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .feature h3 {
+            color: #2c3e50;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+        
+        .feature p {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .stats {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 50px 40px;
+            margin-top: 60px;
+            border-radius: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            text-align: center;
+        }
+        
+        .stat-item h4 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .stat-item p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .cta {
+            text-align: center;
+            margin-top: 60px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            padding: 20px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.3em;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(46, 204, 113, 0.6);
+        }
+        
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 60px;
+        }
+        
+        .footer p {
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .header p {
+                font-size: 1em;
+            }
+            
+            .mission h2 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 绿色地球计划</h1>
+            <p>共同守护我们唯一的家园</p>
+        </div>
+        
+        <div class="content">
+            <div class="mission">
+                <h2>我们的使命</h2>
+                <p>
+                    致力于推动全球环境保护事业，通过科技创新和公众教育，
+                    减少碳排放，保护生物多样性，为子孙后代留下一个可持续发展的绿色星球。
+                    每一个小小的行动，都能汇聚成改变世界的力量。
+                </p>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <span class="feature-icon">♻️</span>
+                    <h3>循环经济</h3>
+                    <p>推广资源循环利用，减少浪费，实现经济与环境的和谐发展</p>
+                </div>
+                
+                <div class="feature">
+                    <span class="feature-icon">🌱</span>
+                    <h3>植树造林</h3>
+                    <p>每年种植数百万棵树木，恢复森林生态系统，吸收大气中的二氧化碳</p>
+                </div>
+                
+                <div class="feature">
+                    <span class="feature-icon">⚡</span>
+                    <h3>清洁能源</h3>
+                    <p>推动太阳能、风能等可再生能源的应用，减少化石燃料依赖</p>
+                </div>
+                
+                <div class="feature">
+                    <span class="feature-icon">🌊</span>
+                    <h3>海洋保护</h3>
+                    <p>清理海洋塑料垃圾，保护海洋生态系统和珍稀物种</p>
+                </div>
+                
+                <div class="feature">
+                    <span class="feature-icon">🏭</span>
+                    <h3>减排行动</h3>
+                    <p>帮助企业实施碳中和战略，降低温室气体排放</p>
+                </div>
+                
+                <div class="feature">
+                    <span class="feature-icon">📚</span>
+                    <h3>环保教育</h3>
+                    <p>在全球范围内开展环保教育，提升公众环境保护意识</p>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <h4>500万+</h4>
+                    <p>参与志愿者</p>
+                </div>
+                <div class="stat-item">
+                    <h4>1000万+</h4>
+                    <p>种植树木</p>
+                </div>
+                <div class="stat-item">
+                    <h4>150+</h4>
+                    <p>覆盖国家</p>
+                </div>
+                <div class="stat-item">
+                    <h4>2030</h4>
+                    <p>碳中和目标</p>
+                </div>
+            </div>
+            
+            <div class="cta">
+                <a href="#" class="cta-button" onclick="return false;">立即加入我们</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 绿色地球计划 | 让地球更美好，从我做起</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">联系我们：contact@greenearth.org</p>
+        </div>
+    </div>
+</body>
+</html>
