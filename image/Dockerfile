@@ -33,6 +33,13 @@ RUN set -eux; \
     ln -sf /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /opt/emby-server/system/sqlite3.so; \
   fi
 
+RUN set -eux; \
+  mkdir -p /var/lib/emby/programdata; \
+  if [ -e /opt/emby-server/programdata ] && [ ! -L /opt/emby-server/programdata ]; then \
+    rm -rf /opt/emby-server/programdata; \
+  fi; \
+  ln -sfn /var/lib/emby/programdata /opt/emby-server/programdata
+
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
 
