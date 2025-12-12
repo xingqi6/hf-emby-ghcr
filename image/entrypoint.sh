@@ -6,7 +6,7 @@ set -euo pipefail
 : "${SYNC_INTERVAL:=3600}"
 : "${KEEP_SNAPSHOTS:=5}"
 
-: "${DATA_DIR:=/var/lib/emby}"
+: "${DATA_DIR:=/var/lib/mediacore}"
 : "${WEBDAV_URL:=}"
 : "${WEBDAV_USERNAME:=}"
 : "${WEBDAV_PASSWORD:=}"
@@ -15,47 +15,42 @@ set -euo pipefail
 mkdir -p "${DATA_DIR}"
 
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
-  python3 /snapshot.py restore \
+  python3 /backup.py restore \
     --data-dir "${DATA_DIR}" \
     --webdav-url "${WEBDAV_URL}" \
     --webdav-username "${WEBDAV_USERNAME}" \
     --webdav-password "${WEBDAV_PASSWORD}" \
     --webdav-backup-path "${WEBDAV_BACKUP_PATH}" \
-    --keep "${KEEP_SNAPSHOTS}" || true
+    --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 || true
 
-  python3 /snapshot.py daemon \
+  python3 /backup.py daemon \
     --data-dir "${DATA_DIR}" \
     --webdav-url "${WEBDAV_URL}" \
     --webdav-username "${WEBDAV_USERNAME}" \
     --webdav-password "${WEBDAV_PASSWORD}" \
     --webdav-backup-path "${WEBDAV_BACKUP_PATH}" \
     --interval "${SYNC_INTERVAL}" \
-    --keep "${KEEP_SNAPSHOTS}" &
-else
-  echo "[startup] WebDAV not configured; running without remote snapshots."
+    --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 &
 fi
 
-EMBY_BIN="/opt/emby-server/system/EmbyServer"
-if [[ ! -x "${EMBY_BIN}" ]]; then
-  echo "[startup] EmbyServer binary not found at ${EMBY_BIN}" >&2
+APP_BIN="/opt/emby-server/system/EmbyServer"
+if [[ ! -x "${APP_BIN}" ]]; then
   exit 1
 fi
 
-"${EMBY_BIN}" &
-emby_pid=$!
+exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
+app_pid=$!
 
-socat TCP-LISTEN:"${APP_PUBLIC_PORT}",fork,reuseaddr TCP:127.0.0.1:"${APP_INTERNAL_PORT}" &
+socat TCP-LISTEN:"${APP_PUBLIC_PORT}",fork,reuseaddr TCP:127.0.0.1:"${APP_INTERNAL_PORT}" > /dev/null 2>&1 &
 proxy_pid=$!
-
-echo "[startup] Service started on port ${APP_PUBLIC_PORT}."
 
 term_handler() {
   kill -TERM "${proxy_pid}" 2>/dev/null || true
-  kill -TERM "${emby_pid}" 2>/dev/null || true
-  wait "${emby_pid}" 2>/dev/null || true
+  kill -TERM "${app_pid}" 2>/dev/null || true
+  wait "${app_pid}" 2>/dev/null || true
 }
 trap term_handler TERM INT
 
-wait -n "${emby_pid}" "${proxy_pid}"
+wait -n "${app_pid}" "${proxy_pid}"
 term_handler
 exit 0
