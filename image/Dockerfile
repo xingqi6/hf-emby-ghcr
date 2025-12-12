@@ -8,6 +8,7 @@ RUN apt-get update \
     ca-certificates curl gnupg \
     python3 python3-venv \
     ffmpeg \
+    libsqlite3-0 \
     socat \
     tzdata \
   && rm -rf /var/lib/apt/lists/*
@@ -25,6 +26,12 @@ RUN set -eux; \
   rm -f /tmp/emby.deb; \
   rm -f /usr/sbin/policy-rc.d /etc/init.d/emby-server; \
   rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; \
+  if [ -f /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 ] && [ -d /opt/emby-server/system ]; then \
+    ln -sf /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /opt/emby-server/system/libsqlite3.so; \
+    ln -sf /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /opt/emby-server/system/sqlite3.so; \
+  fi
 
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
