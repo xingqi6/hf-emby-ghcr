@@ -41,15 +41,30 @@ fi
 
 APP_BIN="/opt/emby-server/system/EmbyServer"
 if [[ ! -x "${APP_BIN}" ]]; then
+  echo "Error: EmbyServer binary not found"
   exit 1
 fi
 
-# 启动主服务
-exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
+# 设置环境变量
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+export MONO_THREADS_PER_CPU=50
+export MALLOC_CHECK_=0
+
+# 启动主服务 - 不使用 exec -a 来避免崩溃
+"${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
 app_pid=$!
 
-# 等待服务启动
-sleep 5
+echo "Starting services..."
+sleep 8
+
+# 检查进程是否还在运行
+if ! kill -0 "${app_pid}" 2>/dev/null; then
+  echo "Error: Main process failed to start"
+  # 显示实际错误，暂时移除静默
+  "${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg &
+  app_pid=$!
+  sleep 5
+fi
 
 # 启动 nginx (前台运行)
 nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
@@ -67,11 +82,12 @@ term_handler() {
 }
 trap term_handler TERM INT
 
-# 监控进程，如果任一进程退出则重启
+# 监控进程
 while true; do
   if ! kill -0 "${app_pid}" 2>/dev/null; then
     echo "Main process died, restarting..."
-    exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
+    sleep 5
+    "${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
     app_pid=$!
   fi
   
