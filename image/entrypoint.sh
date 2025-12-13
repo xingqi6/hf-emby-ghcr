@@ -13,12 +13,19 @@ set -euo pipefail
 : "${WEBDAV_BACKUP_PATH:=}"
 
 mkdir -p "${DATA_DIR}"
+mkdir -p "${DATA_DIR}/programdata"
 mkdir -p /var/www/html
 mkdir -p /tmp/nginx_client_body
 mkdir -p /tmp/nginx_proxy
 mkdir -p /tmp/nginx_fastcgi
 mkdir -p /tmp/nginx_uwsgi
 mkdir -p /tmp/nginx_scgi
+
+# 确保符号链接正确
+if [ -e /opt/emby-server/programdata ] && [ ! -L /opt/emby-server/programdata ]; then
+  rm -rf /opt/emby-server/programdata
+fi
+ln -sfn "${DATA_DIR}/programdata" /opt/emby-server/programdata
 
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
   python3 /backup.py restore \
@@ -50,8 +57,8 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 export MONO_THREADS_PER_CPU=50
 export MALLOC_CHECK_=0
 
-# 启动主服务 - 不使用 exec -a 来避免崩溃
-"${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
+# 启动主服务 - 使用默认配置路径
+"${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
 app_pid=$!
 
 echo "Starting services..."
@@ -59,9 +66,8 @@ sleep 8
 
 # 检查进程是否还在运行
 if ! kill -0 "${app_pid}" 2>/dev/null; then
-  echo "Error: Main process failed to start"
-  # 显示实际错误，暂时移除静默
-  "${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg &
+  echo "Error: Main process failed to start, trying again..."
+  "${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 &
   app_pid=$!
   sleep 5
 fi
@@ -87,7 +93,7 @@ while true; do
   if ! kill -0 "${app_pid}" 2>/dev/null; then
     echo "Main process died, restarting..."
     sleep 5
-    "${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
+    "${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
     app_pid=$!
   fi
   
