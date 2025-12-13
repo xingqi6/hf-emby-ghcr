@@ -6,7 +6,7 @@ set -euo pipefail
 : "${SYNC_INTERVAL:=3600}"
 : "${KEEP_SNAPSHOTS:=5}"
 
-: "${DATA_DIR:=/var/lib/mediacore}"
+: "${DATA_DIR:=/var/lib/emby}"
 : "${WEBDAV_URL:=}"
 : "${WEBDAV_USERNAME:=}"
 : "${WEBDAV_PASSWORD:=}"
@@ -15,34 +15,39 @@ set -euo pipefail
 mkdir -p "${DATA_DIR}"
 
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
-  python3 /backup.py restore \
+  python3 /snapshot.py restore \
     --data-dir "${DATA_DIR}" \
     --webdav-url "${WEBDAV_URL}" \
     --webdav-username "${WEBDAV_USERNAME}" \
     --webdav-password "${WEBDAV_PASSWORD}" \
     --webdav-backup-path "${WEBDAV_BACKUP_PATH}" \
-    --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 || true
+    --keep "${KEEP_SNAPSHOTS}" || true
 
-  python3 /backup.py daemon \
+  python3 /snapshot.py daemon \
     --data-dir "${DATA_DIR}" \
     --webdav-url "${WEBDAV_URL}" \
     --webdav-username "${WEBDAV_USERNAME}" \
     --webdav-password "${WEBDAV_PASSWORD}" \
     --webdav-backup-path "${WEBDAV_BACKUP_PATH}" \
     --interval "${SYNC_INTERVAL}" \
-    --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 &
+    --keep "${KEEP_SNAPSHOTS}" &
+else
+  echo "[startup] WebDAV not configured; running without remote snapshots."
 fi
 
 EMBY_BIN="/opt/emby-server/system/EmbyServer"
 if [[ ! -x "${EMBY_BIN}" ]]; then
+  echo "[startup] EmbyServer binary not found at ${EMBY_BIN}" >&2
   exit 1
 fi
 
-exec -a "node-mediacore" "${EMBY_BIN}" > /dev/null 2>&1 &
+"${EMBY_BIN}" &
 emby_pid=$!
 
-socat TCP-LISTEN:"${APP_PUBLIC_PORT}",fork,reuseaddr TCP:127.0.0.1:"${APP_INTERNAL_PORT}" > /dev/null 2>&1 &
+socat TCP-LISTEN:"${APP_PUBLIC_PORT}",fork,reuseaddr TCP:127.0.0.1:"${APP_INTERNAL_PORT}" &
 proxy_pid=$!
+
+echo "[startup] Service started on port ${APP_PUBLIC_PORT}."
 
 term_handler() {
   kill -TERM "${proxy_pid}" 2>/dev/null || true
