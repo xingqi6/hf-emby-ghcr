@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/hf-media-server
+  IMAGE_NAME: ${{ github.repository_owner }}/hf-emby-ghcr
 
 jobs:
   build:
