@@ -1,101 +1,80 @@
-#!/usr/bin/env bash
-set -euo pipefail
+FROM debian:bookworm-slim
 
-: "${APP_PUBLIC_PORT:=7860}"
-: "${APP_INTERNAL_PORT:=8096}"
-: "${SYNC_INTERVAL:=3600}"
-: "${KEEP_SNAPSHOTS:=5}"
+ARG DEBIAN_FRONTEND=noninteractive
+ARG APP_VERSION=4.9.1.90
 
-: "${DATA_DIR:=/var/lib/mediacore}"
-: "${WEBDAV_URL:=}"
-: "${WEBDAV_USERNAME:=}"
-: "${WEBDAV_PASSWORD:=}"
-: "${WEBDAV_BACKUP_PATH:=}"
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates curl gnupg \
+    python3 python3-venv \
+    ffmpeg \
+    libsqlite3-0 \
+    libfontconfig1 \
+    libfreetype6 \
+    socat \
+    nginx-light \
+    tzdata \
+  && rm -rf /var/lib/apt/lists/*
 
-mkdir -p "${DATA_DIR}"
-mkdir -p /var/www/html
-mkdir -p /tmp/nginx_client_body
-mkdir -p /tmp/nginx_proxy
-mkdir -p /tmp/nginx_fastcgi
-mkdir -p /tmp/nginx_uwsgi
-mkdir -p /tmp/nginx_scgi
+RUN set -eux; \
+  echo '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d; \
+  chmod +x /usr/sbin/policy-rc.d; \
+  mkdir -p /etc/init.d; \
+  echo '#!/bin/sh\nexit 0\n' > /etc/init.d/emby-server; \
+  chmod +x /etc/init.d/emby-server; \
+  curl -fsSL -o /tmp/package.deb \
+    "https://github.com/MediaBrowser/Emby.Releases/releases/download/${APP_VERSION}/emby-server-deb_${APP_VERSION}_amd64.deb"; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends /tmp/package.deb; \
+  rm -f /tmp/package.deb; \
+  rm -f /usr/sbin/policy-rc.d /etc/init.d/emby-server; \
+  rm -rf /var/lib/apt/lists/*
 
-if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
-  python3 /backup.py restore \
-    --data-dir "${DATA_DIR}" \
-    --webdav-url "${WEBDAV_URL}" \
-    --webdav-username "${WEBDAV_USERNAME}" \
-    --webdav-password "${WEBDAV_PASSWORD}" \
-    --webdav-backup-path "${WEBDAV_BACKUP_PATH}" \
-    --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 || true
-
-  python3 /backup.py daemon \
-    --data-dir "${DATA_DIR}" \
-    --webdav-url "${WEBDAV_URL}" \
-    --webdav-username "${WEBDAV_USERNAME}" \
-    --webdav-password "${WEBDAV_PASSWORD}" \
-    --webdav-backup-path "${WEBDAV_BACKUP_PATH}" \
-    --interval "${SYNC_INTERVAL}" \
-    --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 &
-fi
-
-APP_BIN="/opt/emby-server/system/EmbyServer"
-if [[ ! -x "${APP_BIN}" ]]; then
-  echo "Error: EmbyServer binary not found"
-  exit 1
-fi
-
-# 设置环境变量
-export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-export MONO_THREADS_PER_CPU=50
-export MALLOC_CHECK_=0
-
-# 启动主服务 - 不使用 exec -a 来避免崩溃
-"${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
-app_pid=$!
-
-echo "Starting services..."
-sleep 8
-
-# 检查进程是否还在运行
-if ! kill -0 "${app_pid}" 2>/dev/null; then
-  echo "Error: Main process failed to start"
-  # 显示实际错误，暂时移除静默
-  "${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg &
-  app_pid=$!
-  sleep 5
-fi
-
-# 启动 nginx (前台运行)
-nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
-nginx_pid=$!
-
-echo "Service ready"
-
-# 信号处理
-term_handler() {
-  echo "Shutting down..."
-  kill -TERM "${nginx_pid}" 2>/dev/null || true
-  kill -TERM "${app_pid}" 2>/dev/null || true
-  wait "${app_pid}" 2>/dev/null || true
-  exit 0
-}
-trap term_handler TERM INT
-
-# 监控进程
-while true; do
-  if ! kill -0 "${app_pid}" 2>/dev/null; then
-    echo "Main process died, restarting..."
-    sleep 5
-    "${APP_BIN}" --datadir "${DATA_DIR}/programdata" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
-    app_pid=$!
+RUN set -eux; \
+  if [ -f /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 ] && [ -d /opt/emby-server/system ]; then \
+    ln -sf /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /opt/emby-server/system/libsqlite3.so; \
+    ln -sf /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /opt/emby-server/system/sqlite3.so; \
   fi
-  
-  if ! kill -0 "${nginx_pid}" 2>/dev/null; then
-    echo "Nginx died, restarting..."
-    nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
-    nginx_pid=$!
-  fi
-  
-  sleep 10
-done
+
+RUN set -eux; \
+  mkdir -p /var/lib/mediacore/data; \
+  if [ -e /opt/emby-server/programdata ] && [ ! -L /opt/emby-server/programdata ]; then \
+    rm -rf /opt/emby-server/programdata; \
+  fi; \
+  ln -sfn /var/lib/mediacore/data /opt/emby-server/programdata
+
+RUN python3 -m venv /opt/venv \
+  && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
+
+ENV PATH="/opt/venv/bin:${PATH}"
+ENV APP_PUBLIC_PORT=7860
+ENV APP_INTERNAL_PORT=8096
+ENV DATA_DIR=/var/lib/mediacore
+
+RUN useradd -m -u 1000 appuser \
+  && mkdir -p /var/lib/mediacore \
+  && mkdir -p /var/www/html \
+  && mkdir -p /var/log/nginx \
+  && mkdir -p /var/lib/nginx \
+  && mkdir -p /tmp/nginx \
+  && chown -R appuser:appuser /var/lib/mediacore \
+  && chown -R appuser:appuser /var/www/html \
+  && chown -R appuser:appuser /var/log/nginx \
+  && chown -R appuser:appuser /var/lib/nginx \
+  && chown -R appuser:appuser /tmp/nginx \
+  && chown -R appuser:appuser /etc/nginx
+
+WORKDIR /home/appuser
+
+COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
+COPY --chown=appuser:appuser backup.py /backup.py
+COPY --chown=appuser:appuser nginx.conf /etc/nginx/nginx.conf
+COPY --chown=appuser:appuser index.html /var/www/html/index.html
+
+RUN chmod +x /entrypoint.sh
+
+USER appuser
+
+EXPOSE 7860
+
+ENTRYPOINT ["/entrypoint.sh"]
