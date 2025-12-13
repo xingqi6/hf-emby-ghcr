@@ -9,10 +9,7 @@ RUN apt-get update \
     python3 python3-venv \
     ffmpeg \
     libsqlite3-0 \
-    libfontconfig1 \
-    libfreetype6 \
     socat \
-    nginx-light \
     tzdata \
   && rm -rf /var/lib/apt/lists/*
 
@@ -36,16 +33,12 @@ RUN set -eux; \
     ln -sf /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /opt/emby-server/system/sqlite3.so; \
   fi
 
-RUN useradd -m -u 1000 appuser
-
 RUN set -eux; \
   mkdir -p /var/lib/mediacore/programdata; \
-  if [ -e /opt/emby-server/programdata ]; then \
+  if [ -e /opt/emby-server/programdata ] && [ ! -L /opt/emby-server/programdata ]; then \
     rm -rf /opt/emby-server/programdata; \
   fi; \
-  ln -sfn /var/lib/mediacore/programdata /opt/emby-server/programdata; \
-  chown -R appuser:appuser /opt/emby-server; \
-  chown -R appuser:appuser /var/lib/mediacore
+  ln -sfn /var/lib/mediacore/programdata /opt/emby-server/programdata
 
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
@@ -55,22 +48,14 @@ ENV APP_PUBLIC_PORT=7860
 ENV APP_INTERNAL_PORT=8096
 ENV DATA_DIR=/var/lib/mediacore
 
-RUN mkdir -p /var/www/html \
-  && mkdir -p /var/log/nginx \
-  && mkdir -p /var/lib/nginx \
-  && mkdir -p /tmp/nginx \
-  && chown -R appuser:appuser /var/www/html \
-  && chown -R appuser:appuser /var/log/nginx \
-  && chown -R appuser:appuser /var/lib/nginx \
-  && chown -R appuser:appuser /tmp/nginx \
-  && chown -R appuser:appuser /etc/nginx
+RUN useradd -m -u 1000 appuser \
+  && mkdir -p /var/lib/mediacore \
+  && chown -R appuser:appuser /var/lib/mediacore
 
 WORKDIR /home/appuser
 
 COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
 COPY --chown=appuser:appuser backup.py /backup.py
-COPY --chown=appuser:appuser nginx.conf /etc/nginx/nginx.conf
-COPY --chown=appuser:appuser index.html /var/www/html/index.html
 
 RUN chmod +x /entrypoint.sh
 
