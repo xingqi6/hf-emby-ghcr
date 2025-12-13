@@ -37,11 +37,11 @@ RUN set -eux; \
   fi
 
 RUN set -eux; \
-  mkdir -p /var/lib/mediacore/data; \
-  if [ -e /opt/emby-server/programdata ] && [ ! -L /opt/emby-server/programdata ]; then \
+  mkdir -p /var/lib/mediacore/programdata; \
+  if [ -e /opt/emby-server/programdata ]; then \
     rm -rf /opt/emby-server/programdata; \
   fi; \
-  ln -sfn /var/lib/mediacore/data /opt/emby-server/programdata
+  ln -sfn /var/lib/mediacore/programdata /opt/emby-server/programdata
 
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
