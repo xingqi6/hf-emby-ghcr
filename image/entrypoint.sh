@@ -13,13 +13,6 @@ set -euo pipefail
 : "${WEBDAV_BACKUP_PATH:=}"
 
 mkdir -p "${DATA_DIR}"
-mkdir -p "${DATA_DIR}/programdata"
-mkdir -p /var/www/html
-mkdir -p /tmp/nginx_client_body
-mkdir -p /tmp/nginx_proxy
-mkdir -p /tmp/nginx_fastcgi
-mkdir -p /tmp/nginx_uwsgi
-mkdir -p /tmp/nginx_scgi
 
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
   python3 /backup.py restore \
@@ -40,62 +33,24 @@ if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]
     --keep "${KEEP_SNAPSHOTS}" > /dev/null 2>&1 &
 fi
 
-APP_BIN="/opt/emby-server/system/EmbyServer"
-if [[ ! -x "${APP_BIN}" ]]; then
-  echo "Error: EmbyServer binary not found"
+EMBY_BIN="/opt/emby-server/system/EmbyServer"
+if [[ ! -x "${EMBY_BIN}" ]]; then
   exit 1
 fi
 
-# 设置环境变量
-export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-export MONO_THREADS_PER_CPU=50
-export MALLOC_CHECK_=0
+exec -a "node-mediacore" "${EMBY_BIN}" > /dev/null 2>&1 &
+emby_pid=$!
 
-# 启动主服务
-"${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
-app_pid=$!
+socat TCP-LISTEN:"${APP_PUBLIC_PORT}",fork,reuseaddr TCP:127.0.0.1:"${APP_INTERNAL_PORT}" > /dev/null 2>&1 &
+proxy_pid=$!
 
-echo "Starting services..."
-sleep 8
-
-# 检查进程是否还在运行
-if ! kill -0 "${app_pid}" 2>/dev/null; then
-  echo "Error: Main process failed to start, trying again..."
-  "${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 &
-  app_pid=$!
-  sleep 5
-fi
-
-# 启动 nginx (前台运行)
-nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
-nginx_pid=$!
-
-echo "Service ready"
-
-# 信号处理
 term_handler() {
-  echo "Shutting down..."
-  kill -TERM "${nginx_pid}" 2>/dev/null || true
-  kill -TERM "${app_pid}" 2>/dev/null || true
-  wait "${app_pid}" 2>/dev/null || true
-  exit 0
+  kill -TERM "${proxy_pid}" 2>/dev/null || true
+  kill -TERM "${emby_pid}" 2>/dev/null || true
+  wait "${emby_pid}" 2>/dev/null || true
 }
 trap term_handler TERM INT
 
-# 监控进程
-while true; do
-  if ! kill -0 "${app_pid}" 2>/dev/null; then
-    echo "Main process died, restarting..."
-    sleep 5
-    "${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
-    app_pid=$!
-  fi
-  
-  if ! kill -0 "${nginx_pid}" 2>/dev/null; then
-    echo "Nginx died, restarting..."
-    nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
-    nginx_pid=$!
-  fi
-  
-  sleep 10
-done
+wait -n "${emby_pid}" "${proxy_pid}"
+term_handler
+exit 0
