@@ -21,12 +21,6 @@ mkdir -p /tmp/nginx_fastcgi
 mkdir -p /tmp/nginx_uwsgi
 mkdir -p /tmp/nginx_scgi
 
-# 确保符号链接正确
-if [ -e /opt/emby-server/programdata ] && [ ! -L /opt/emby-server/programdata ]; then
-  rm -rf /opt/emby-server/programdata
-fi
-ln -sfn "${DATA_DIR}/programdata" /opt/emby-server/programdata
-
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
   python3 /backup.py restore \
     --data-dir "${DATA_DIR}" \
@@ -57,7 +51,7 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 export MONO_THREADS_PER_CPU=50
 export MALLOC_CHECK_=0
 
-# 启动主服务 - 使用默认配置路径
+# 启动主服务
 "${APP_BIN}" --ffmpeg /usr/bin/ffmpeg 2>&1 | grep -v "emby" | grep -v "Emby" || true &
 app_pid=$!
 
