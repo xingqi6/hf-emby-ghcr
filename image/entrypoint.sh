@@ -14,6 +14,11 @@ set -euo pipefail
 
 mkdir -p "${DATA_DIR}"
 mkdir -p /var/www/html
+mkdir -p /tmp/nginx_client_body
+mkdir -p /tmp/nginx_proxy
+mkdir -p /tmp/nginx_fastcgi
+mkdir -p /tmp/nginx_uwsgi
+mkdir -p /tmp/nginx_scgi
 
 if [[ -n "${WEBDAV_URL}" && -n "${WEBDAV_USERNAME}" && -n "${WEBDAV_PASSWORD}" ]]; then
   python3 /backup.py restore \
@@ -42,8 +47,13 @@ fi
 exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
 app_pid=$!
 
-nginx -g "daemon off;" > /dev/null 2>&1 &
+# 等待服务启动
+sleep 3
+
+nginx -c /etc/nginx/nginx.conf 2>&1 &
 nginx_pid=$!
+
+echo "Service ready"
 
 term_handler() {
   kill -TERM "${nginx_pid}" 2>/dev/null || true
