@@ -41,7 +41,8 @@ RUN set -eux; \
   if [ -e /opt/emby-server/programdata ]; then \
     rm -rf /opt/emby-server/programdata; \
   fi; \
-  ln -sfn /var/lib/mediacore/programdata /opt/emby-server/programdata
+  ln -sfn /var/lib/mediacore/programdata /opt/emby-server/programdata; \
+  chown -h appuser:appuser /opt/emby-server/programdata
 
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/pip install --no-cache-dir requests webdavclient3
