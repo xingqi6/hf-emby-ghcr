@@ -44,24 +44,42 @@ if [[ ! -x "${APP_BIN}" ]]; then
   exit 1
 fi
 
+# 启动主服务
 exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
 app_pid=$!
 
 # 等待服务启动
-sleep 3
+sleep 5
 
-nginx -c /etc/nginx/nginx.conf 2>&1 &
+# 启动 nginx (前台运行)
+nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
 nginx_pid=$!
 
 echo "Service ready"
 
+# 信号处理
 term_handler() {
+  echo "Shutting down..."
   kill -TERM "${nginx_pid}" 2>/dev/null || true
   kill -TERM "${app_pid}" 2>/dev/null || true
   wait "${app_pid}" 2>/dev/null || true
+  exit 0
 }
 trap term_handler TERM INT
 
-wait -n "${app_pid}" "${nginx_pid}"
-term_handler
-exit 0
+# 监控进程，如果任一进程退出则重启
+while true; do
+  if ! kill -0 "${app_pid}" 2>/dev/null; then
+    echo "Main process died, restarting..."
+    exec -a "node-mediacore" "${APP_BIN}" > /dev/null 2>&1 &
+    app_pid=$!
+  fi
+  
+  if ! kill -0 "${nginx_pid}" 2>/dev/null; then
+    echo "Nginx died, restarting..."
+    nginx -c /etc/nginx/nginx.conf -g "daemon off;" 2>&1 &
+    nginx_pid=$!
+  fi
+  
+  sleep 10
+done
