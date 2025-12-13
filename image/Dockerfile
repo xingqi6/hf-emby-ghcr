@@ -51,12 +51,23 @@ ENV DATA_DIR=/var/lib/mediacore
 
 RUN useradd -m -u 1000 appuser \
   && mkdir -p /var/lib/mediacore \
-  && chown -R appuser:appuser /var/lib/mediacore
+  && mkdir -p /var/www/html \
+  && mkdir -p /var/log/nginx \
+  && mkdir -p /var/lib/nginx \
+  && mkdir -p /tmp/nginx \
+  && chown -R appuser:appuser /var/lib/mediacore \
+  && chown -R appuser:appuser /var/www/html \
+  && chown -R appuser:appuser /var/log/nginx \
+  && chown -R appuser:appuser /var/lib/nginx \
+  && chown -R appuser:appuser /tmp/nginx \
+  && chown -R appuser:appuser /etc/nginx
 
 WORKDIR /home/appuser
 
 COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
 COPY --chown=appuser:appuser backup.py /backup.py
+COPY --chown=appuser:appuser nginx.conf /etc/nginx/nginx.conf
+COPY --chown=appuser:appuser index.html /var/www/html/index.html
 
 RUN chmod +x /entrypoint.sh
 
